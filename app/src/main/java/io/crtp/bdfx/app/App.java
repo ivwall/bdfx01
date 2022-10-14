@@ -11,11 +11,47 @@ import static io.crtp.bdfx.app.MessageUtils.getMessage;
 
 import org.apache.commons.text.WordUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.bitcoinj.utils.BlockFileLoader;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.PrunedException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.store.BlockStoreException;
+
+import java.io.File;
+import java.util.ArrayList;  
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class App {
+    private static final Logger log = LoggerFactory.getLogger(App.class);
     public static void main(String[] args) {
         LinkedList tokens;
         tokens = split(getMessage());
         String result = join(tokens);
-        System.out.println(WordUtils.capitalize(result));
+        //System.out.println(WordUtils.capitalize(result));
+        log.debug(result);
+
+        NetworkParameters np = new MainNetParams();
+        List<File> blockChainFiles = new ArrayList<>();
+        blockChainFiles.add(new File("./blocks/rev00000.dat"));
+        BlockFileLoader bfl = new BlockFileLoader(np, blockChainFiles);
+
+
+        // Iterate over the blocks in the dataset.
+        for (Block block : bfl) {
+
+            System.out.println(block.getHashAsString());
+            log.debug(block.getHashAsString());
+
+        }
+
+
+
     }
 }
