@@ -19,8 +19,21 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.PrunedException;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.script.ScriptChunk;
+import org.bitcoinj.core.Address;
+
+import org.bitcoinj.core.Base58;
+import org.bitcoinj.core.Sha256Hash;
+
+import java.security.MessageDigest;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import java.security.Security;
+
 
 import java.io.File;
 import java.util.ArrayList;  
@@ -28,30 +41,225 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+//import java.io.File;
+import java.text.SimpleDateFormat;
+//import java.util.LinkedList;
+//import java.util.List;
+//import java.util.HashMap;
+import java.util.Locale;
+//import java.util.Map;
+
+import java.text.SimpleDateFormat;
+
 public class App {
     private static final Logger log = LoggerFactory.getLogger(App.class);
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
     public static void main(String[] args) {
+
+        Test test = new Test();
+        test.one();
+
+        String PREFIX = "../blocks/";
         LinkedList tokens;
         tokens = split(getMessage());
         String result = join(tokens);
-        //System.out.println(WordUtils.capitalize(result));
+        System.out.println(WordUtils.capitalize(result));
         log.debug(result);
 
-        NetworkParameters np = new MainNetParams();
-        List<File> blockChainFiles = new ArrayList<>();
-        blockChainFiles.add(new File("./blocks/rev00000.dat"));
-        BlockFileLoader bfl = new BlockFileLoader(np, blockChainFiles);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy MM dd HH:mm:ss");
 
+        //NetworkParameters np = new MainNetParams();
+        List<File> blockChainFiles = new ArrayList<>();
+        blockChainFiles.add(new File("../blocks/blk00000.dat"));
+        //blockChainFiles.add(new File("../blocks/blk00001.dat"));
+        //blockChainFiles.add(new File("../blocks/blk03239.dat"));
+        //blockChainFiles.add(new File("../blocks/blk03240.dat"));
+        MainNetParams params = MainNetParams.get();
+        Context context = new Context(params);
+        BlockFileLoader bfl = new BlockFileLoader(params, blockChainFiles);
+
+        List<Transaction> trxs = null;
+        Transaction trx = null;
+
+        /****
+        List<File> list = new LinkedList<File>();
+        for (int i = 0; true; i++) {
+            //File file = new File(PREFIX + String.format(Locale.US, "blk%05d.dat", i));
+            File file = new File(PREFIX + String.format(Locale.US, "rev%05d.dat", i));
+            if (!file.exists())
+                break;
+            list.add(file);
+        }
+        BlockFileLoader bfl = new BlockFileLoader(np, list);
+          */
+        //BlockFileLoader bfl = new BlockFileLoader(np, buildList());
+
+        List<ScriptChunk> scriptChunks = null;
+        List<java.security.interfaces.ECKey> ecKeyList = null;
 
         // Iterate over the blocks in the dataset.
+        int blkNum = 0;
         for (Block block : bfl) {
 
-            System.out.println(block.getHashAsString());
-            log.debug(block.getHashAsString());
+        //Block block = null;
+        //for ( int blkNum = 0; blkNum < bfl.size(); blkNum++ ) {
+        //    block = bfl.get( blkNum );
 
+            try {
+                //System.out.println(block.getHashAsString());
+                log.debug( "block number " + blkNum );
+                blkNum++;
+                log.debug( block.getHashAsString() );
+                //log.debug("BLOCK_HEIGHT_GENESIS "+block.BLOCK_HEIGHT_GENESIS);
+                log.debug( "block date time"+sdf.format(block.getTime()) );
+                trxs = block.getTransactions();
+                log.debug( "trxs "+trxs.size() );
+                log.debug( block.toString() );
+
+                for( int x=0; x<trxs.size() ; x++ ) {
+
+                    log.debug( "trx "+x);
+                    trx = trxs.get(x);
+                    log.debug( "   "+trx.toString());
+
+                    log.debug("trx.getOutput(0).getScriptPubKey() "+trx.getOutput(0).getScriptPubKey().toString());
+
+                    try {
+                        Address addr = trx.getOutput(0).getScriptPubKey().getToAddress(params);
+                    }catch(Exception ex){
+                        log.debug("Address error "+ex.toString());
+                    }
+                    //log.debug("addr "+addr.toString());
+
+                    //ecKeyList = trx.getOutput(0).getScriptPubKey().getPubKeys();
+                    //int keyListSize = ecKeyList.size();
+                    //log.debug("keyListSize "+keyListSize);
+                    //for(int a=0; a<keyListSize; a++){
+                    //    log.debug("a "+a+" "+ecKeyList.get(a).toString());
+                    //}
+
+                    scriptChunks = trx.getOutput(0).getScriptPubKey().getChunks();
+
+                    //int listSize =  scriptChunks.size();
+                    //log.debug("script chunks size "+listSize);
+                    //for(int a=0; a<listSize; a++) {
+                    //    log.debug(" a "+a+" "+scriptChunks.get(a));
+                    //}
+
+                    String chunkZero = ""+scriptChunks.get(0);
+                    log.debug("chunk Zero "+chunkZero);
+
+                    int leftBracket = chunkZero.indexOf("[");
+                    int rightBracket = chunkZero.indexOf("]");
+                    String pubKey = chunkZero.substring(leftBracket+1, rightBracket);
+                    log.debug("pubKey "+pubKey);
+
+                    try {
+                        String addr = addressFromPubKey(pubKey);
+                        log.debug("addr "+addr);
+                    }catch(Exception ex){
+                        log.debug("addr ex "+ex.toString());
+                    }
+
+                    log.debug("trx.getOutput(0).getScriptType() "+trx.getOutput(0).getScriptPubKey().getScriptType());
+
+                    java.util.List<ECKey> pk = trx.getOutput(0).getScriptPubKey().getPubKeys();
+                    log.debug( "pk   "+pk.toString());
+                    //trx.parse();
+                    //log.debug("   "+trx.toString());
+
+                }
+
+            } catch(Exception ex) {
+                log.debug("error "+ex.toString());
+            }
         }
-
-
-
     }
+
+    /*****
+	private List<File> buildList() {
+        String PREFIX = "../blocks/";
+        List<File> list = new LinkedList<File>();
+        for (int i = 0; true; i++) {
+            //File file = new File(PREFIX + String.format(Locale.US, "blk%05d.dat", i));
+            File file = new File(PREFIX + String.format(Locale.US, "rev%05d.dat", i));
+            if (!file.exists())
+                break;
+            list.add(file);
+        }
+        return list;
+    }
+     */
+
+
+
+    /***
+     * 
+     */
+    //public String addressFromPubKey( String a ){
+    public static String addressFromPubKey( String a ){
+        String result = "addr not found";
+        try {
+            //System.out.println("learn me btc: https://learnmeabitcoin.com/technical/hash-function");
+            //https://gobittest.appspot.com/Address
+            byte[] iti = hexStringToByteArray(a);
+            Sha256Hash itiHash = Sha256Hash.of(iti);
+
+            MessageDigest rmdx = MessageDigest.getInstance("RipeMD160", "BC");
+            byte[] r1x = rmdx.digest(itiHash.getBytes());
+            //Converting the byte array in to HexString format
+            StringBuffer hexString = new StringBuffer();
+            for (int i = 0;i<r1x.length;i++) {
+                hexString.append(Integer.toHexString(0xFF & r1x[i]));
+            }
+
+            byte[] zero = hexStringToByteArray("00");
+            byte[] s5 = new byte[r1x.length + 1];
+            s5[0] = zero[0];
+            System.arraycopy(r1x, 0, s5, 1, r1x.length);
+            
+            Sha256Hash s5x = Sha256Hash.of(s5);
+            Sha256Hash s6x = Sha256Hash.of(s5x.getBytes());
+
+            byte[] first4of6 = new byte[4];
+            System.arraycopy(s6x.getBytes(), 0, first4of6, 0, 4);
+
+            byte[] s8 = new byte[s5.length + first4of6.length];
+
+            System.arraycopy(s5, 0, s8, 0, s5.length);
+            System.arraycopy(first4of6, 0, s8, s5.length, first4of6.length);
+
+            //7 - First four bytes of 6
+            result = Base58.encode(s8);
+        } catch(Exception ex) {
+            System.out.println("address_From_Pub_Key  "+ex.toString());
+            ex.printStackTrace();
+        }
+        return result;
+    }
+
+
+
+
+
+    /* s must be an even-length string. */
+    //https://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java/140861#140861
+    /***
+     * 
+     */
+    public static byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                                + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+
+
 }
