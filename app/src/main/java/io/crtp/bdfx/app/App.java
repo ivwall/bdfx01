@@ -24,8 +24,11 @@ import org.bitcoinj.core.ECKey;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.core.Address;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.Script.ScriptType;
 
 import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.Sha256Hash;
@@ -41,49 +44,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-//import java.io.File;
 import java.text.SimpleDateFormat;
-//import java.util.LinkedList;
-//import java.util.List;
-//import java.util.HashMap;
 import java.util.Locale;
-//import java.util.Map;
 
 import java.text.SimpleDateFormat;
 
 public class App {
+
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     static {
         Security.addProvider(new BouncyCastleProvider());
     }
 
+    static MainNetParams params = MainNetParams.get();
+
     public static void main(String[] args) {
 
-        Test test = new Test();
-        test.one();
-
         String PREFIX = "../blocks/";
-        LinkedList tokens;
-        tokens = split(getMessage());
-        String result = join(tokens);
-        System.out.println(WordUtils.capitalize(result));
-        log.debug(result);
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy MM dd HH:mm:ss");
 
-        //NetworkParameters np = new MainNetParams();
         List<File> blockChainFiles = new ArrayList<>();
         blockChainFiles.add(new File("../blocks/blk00000.dat"));
         //blockChainFiles.add(new File("../blocks/blk00001.dat"));
-        //blockChainFiles.add(new File("../blocks/blk03239.dat"));
-        //blockChainFiles.add(new File("../blocks/blk03240.dat"));
-        MainNetParams params = MainNetParams.get();
+        //MainNetParams params = MainNetParams.get();
         Context context = new Context(params);
         BlockFileLoader bfl = new BlockFileLoader(params, blockChainFiles);
 
         List<Transaction> trxs = null;
         Transaction trx = null;
+        List<TransactionOutput> trxOutputs = null;
+        TransactionOutput trxOut = null;
+        Script script = null;
+        Address address = null;
 
         /****
         List<File> list = new LinkedList<File>();
@@ -100,79 +94,187 @@ public class App {
 
         List<ScriptChunk> scriptChunks = null;
         List<java.security.interfaces.ECKey> ecKeyList = null;
+        String scriptType = null;
 
         // Iterate over the blocks in the dataset.
         int blkNum = 0;
         for (Block block : bfl) {
-
-        //Block block = null;
-        //for ( int blkNum = 0; blkNum < bfl.size(); blkNum++ ) {
-        //    block = bfl.get( blkNum );
-
+            log.debug("");
+            log.debug("- - - - - - - - - - - - - - - - - - - - - - - - ");
+            log.debug("");
             try {
                 //System.out.println(block.getHashAsString());
                 log.debug( "block number " + blkNum );
                 blkNum++;
                 log.debug( block.getHashAsString() );
-                //log.debug("BLOCK_HEIGHT_GENESIS "+block.BLOCK_HEIGHT_GENESIS);
-                log.debug( "block date time"+sdf.format(block.getTime()) );
+                log.debug( "block date time "+sdf.format(block.getTime()) );
                 trxs = block.getTransactions();
-                log.debug( "trxs "+trxs.size() );
-                log.debug( block.toString() );
+                log.debug( "num of trxs "+trxs.size() );
+                //log.debug( "block.toString = " + block.toString() );
+
+                log.debug("= = = = = = = = = = = = = = = = = = = = = = = = = = = = = =");
 
                 for( int x=0; x<trxs.size() ; x++ ) {
 
                     log.debug( "trx "+x);
                     trx = trxs.get(x);
-                    log.debug( "   "+trx.toString());
+                    //log.debug( "   "+trx.toString());
 
-                    log.debug("trx.getOutput(0).getScriptPubKey() "+trx.getOutput(0).getScriptPubKey().toString());
+                    log.debug("+ + + + + + + + + + + + + + + + + + + + + + +");
 
-                    try {
-                        Address addr = trx.getOutput(0).getScriptPubKey().getToAddress(params);
-                    }catch(Exception ex){
-                        log.debug("Address error "+ex.toString());
+                    trxOutputs = trx.getOutputs();
+                    log.debug("trxOutputs.size "+trxOutputs.size());
+                     
+                    for ( int z=0; z < trxOutputs.size(); z++ ) {
+
+                        log.debug( "z =  " + z );
+
+                        ScriptType st = trx.getOutput( z ).getScriptPubKey().getScriptType();
+
+                        if ( st == null ) {
+
+                            log.debug("script == null");
+
+                        } else {
+
+                            scriptType = trx.getOutput( z ).getScriptPubKey().getScriptType().toString();
+                            //log.debug( "trx.getOutput(" + z + ").getScriptType() " + scriptType);
+
+                            if ( scriptType.equalsIgnoreCase("P2PK") ) {
+
+                                //log.debug( "if (scriptType.equalsIgnoreCase(P2PK)) {  <-----" );
+                                scriptChunks = trx.getOutput( z ).getScriptPubKey().getChunks();
+                                String chunkZero = ""+scriptChunks.get( z );
+
+                                //log.debug( "trx.getOutput(" + z + ") " + trx.getOutput( z ).toString());
+                                trxOutputs = trx.getOutputs();
+                                //log.debug( "trxOutputs.size " + trxOutputs.size() );
+
+                                for ( int y=0; y < trxOutputs.size(); y++ ) {
+
+                                    log.debug( " y " + y );
+                                    trxOut = trxOutputs.get( y );
+                                    script = trxOut.getScriptPubKey();
+                                    chunkZero = script.toString();
+                                    log.debug( "   >>> script.toString " + chunkZero );
+
+                                    int leftBracket = chunkZero.indexOf("[");
+                                    int rightBracket = chunkZero.indexOf("]");
+                                    String pubKey = chunkZero.substring(leftBracket+1, rightBracket);
+                                    log.debug("pubKey "+pubKey);
+
+                                    try {
+                                        String addr = addressFromPubKey(pubKey);
+                                        log.debug("addr "+addr);
+                                    }catch(Exception ex){
+                                        log.debug("addr ex "+ex.toString());
+                                    }
+
+                                }
+
+                            //TODO: use enumeration types
+                            } else if ( scriptType.equalsIgnoreCase("P2PKH") ) { 
+
+                                //log.debug( "} else if ( scriptType.equalsIgnoreCase( _P2PKH_ ) ) {   <--------" );
+                                //log.debug( "trx.getOutput(" + z + ") " + trx.getOutput( z ).toString() );
+                                trxOutputs = trx.getOutputs();
+                                //log.debug("trxOutputs.size "+trxOutputs.size());
+
+                                for( int y=0; y<trxOutputs.size(); y++ ) {
+
+                                    log.debug( " y " + y );
+                                    trxOut = trxOutputs.get( y );
+
+                                    ScriptType scriptTypeEnum =  trx.getOutput( y ).getScriptPubKey().getScriptType();
+                                    //log.debug( "scriptTypeEnum " + scriptTypeEnum.toString() );
+
+                                    //TODO : big redundancy!!!
+                                    if ( scriptTypeEnum == Script.ScriptType.P2PKH ) {
+
+                                        log.debug("scriptTypeEnum == Script.ScriptType.   __P2PKH__");
+
+                                        script = trxOut.getScriptPubKey();
+                                        //log.debug( "   >>> script.toString " + script.toString() );
+                                        /*****
+                                        try {
+                                            address = script.getToAddress( params );
+                                            log.debug( "   >>> address.toString " + address.toString() );
+                                        }catch(Exception exx){
+                                            log.debug("address exception "+exx.toString());
+                                        }
+                                         */
+                                        log.debug( "found addr " + script_getToAddress( script ) );
+
+                                    //TODO : big redundancy!!!!
+                                    } else if ( scriptTypeEnum == Script.ScriptType.P2PK ) {
+
+                                        log.debug("scriptTypeEnum == Script.ScriptType.   __P2PK__");
+                                        script = trxOut.getScriptPubKey();
+                                        if ( script == null ) {
+
+                                            log.debug( "   !!! script is NULL " );
+
+                                        } else {
+
+                                            //log.debug( "   >>> script.toString " + script.toString() );
+
+                                            scriptChunks = trx.getOutput( y ).getScriptPubKey().getChunks();
+                                            String chunkZero = ""+scriptChunks.get( y );
+                                                    
+                                            trxOut = trxOutputs.get( y );
+                                            script = trxOut.getScriptPubKey();
+                                            chunkZero = script.toString();
+                                            //log.debug( "   >>> script.toString " + chunkZero );
+            
+                                            int leftBracket = chunkZero.indexOf("[");
+                                            int rightBracket = chunkZero.indexOf("]");
+                                            String pubKey = chunkZero.substring(leftBracket+1, rightBracket);
+                                            log.debug("pubKey "+pubKey);
+            
+                                            try {
+                                                String addr = addressFromPubKey(pubKey);
+                                                log.debug("addr "+addr);
+                                            }catch(Exception exx){
+                                                log.debug("address exception "+exx.toString());
+                                            }
+
+                                        }
+
+                                    }
+                                }
+                            } else {
+
+                                log.debug("} else {  <-------");
+                                //log.debug("trx.getOutput("+x+") "+trx.getOutput(x).toString());
+                                trxOutputs = trx.getOutputs();
+                                log.debug("trxOutputs.size "+trxOutputs.size());
+
+                                for( int y=0; y < trxOutputs.size(); y++ ) {
+
+                                    //log.debug( " y " + y );
+                                    trxOut = trxOutputs.get( y );
+                                    script = trxOut.getScriptPubKey();
+                                    //log.debug( "   >>> script.toString " + script.toString() );
+                                    
+                                    /*****
+                                    try {
+                                        address = script.getToAddress( params );
+                                        log.debug( "   >>> address.toString " + address.toString() );
+                                    }catch(Exception exx){
+                                        log.debug("address exception "+exx.toString());
+                                    }
+                                     */
+
+                                    log.debug( "found addr " + script_getToAddress( script ) );
+                                }
+                            }
+                        }
                     }
-                    //log.debug("addr "+addr.toString());
-
-                    //ecKeyList = trx.getOutput(0).getScriptPubKey().getPubKeys();
-                    //int keyListSize = ecKeyList.size();
-                    //log.debug("keyListSize "+keyListSize);
-                    //for(int a=0; a<keyListSize; a++){
-                    //    log.debug("a "+a+" "+ecKeyList.get(a).toString());
-                    //}
-
-                    scriptChunks = trx.getOutput(0).getScriptPubKey().getChunks();
-
-                    //int listSize =  scriptChunks.size();
-                    //log.debug("script chunks size "+listSize);
-                    //for(int a=0; a<listSize; a++) {
-                    //    log.debug(" a "+a+" "+scriptChunks.get(a));
-                    //}
-
-                    String chunkZero = ""+scriptChunks.get(0);
-                    log.debug("chunk Zero "+chunkZero);
-
-                    int leftBracket = chunkZero.indexOf("[");
-                    int rightBracket = chunkZero.indexOf("]");
-                    String pubKey = chunkZero.substring(leftBracket+1, rightBracket);
-                    log.debug("pubKey "+pubKey);
-
-                    try {
-                        String addr = addressFromPubKey(pubKey);
-                        log.debug("addr "+addr);
-                    }catch(Exception ex){
-                        log.debug("addr ex "+ex.toString());
-                    }
-
-                    log.debug("trx.getOutput(0).getScriptType() "+trx.getOutput(0).getScriptPubKey().getScriptType());
-
-                    java.util.List<ECKey> pk = trx.getOutput(0).getScriptPubKey().getPubKeys();
-                    log.debug( "pk   "+pk.toString());
-                    //trx.parse();
-                    //log.debug("   "+trx.toString());
-
                 }
+
+                //if ( blkNum == 71200 ) {
+                //    System.exit(0);
+                //}
 
             } catch(Exception ex) {
                 log.debug("error "+ex.toString());
@@ -180,20 +282,17 @@ public class App {
         }
     }
 
-    /*****
-	private List<File> buildList() {
-        String PREFIX = "../blocks/";
-        List<File> list = new LinkedList<File>();
-        for (int i = 0; true; i++) {
-            //File file = new File(PREFIX + String.format(Locale.US, "blk%05d.dat", i));
-            File file = new File(PREFIX + String.format(Locale.US, "rev%05d.dat", i));
-            if (!file.exists())
-                break;
-            list.add(file);
+    public static String script_getToAddress( Script script ) {
+        String addressStr = "not set";
+        try {
+            addressStr = script.getToAddress( params ).toString();
+            //addressStr = address.toString();
+            //log.debug( "   >>> address.toString " + addressStr );
+        }catch(Exception exx){
+            log.debug("address exception "+exx.toString());
         }
-        return list;
+        return addressStr;
     }
-     */
 
 
 
@@ -242,10 +341,6 @@ public class App {
         return result;
     }
 
-
-
-
-
     /* s must be an even-length string. */
     //https://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java/140861#140861
     /***
@@ -260,6 +355,5 @@ public class App {
         }
         return data;
     }
-
 
 }
